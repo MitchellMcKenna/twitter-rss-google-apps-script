@@ -43,8 +43,8 @@ function initialize(key, secret) {
         msg += "\n\nTwitter Search for New York";
         msg += "\n" + url + "?action=search&q=new+york";
 
-        msg += "\n\nYou should replace the value of 'q' parameter in the URLs as per requirement.";
-        msg += "\n\nFor help, please refer to http://www.labnol.org/?p=27931";
+        msg += "\n\nYou should replace the value of the 'q' parameter in the URLs to the one you want.";
+        msg += "\n\nFor help, please refer to https://github.com/MitchellMcKenna/twitter-rss-google-apps-script";
 
         MailApp.sendEmail(Session.getActiveUser().getEmail(), "Twitter RSS Feeds", msg);
     }
