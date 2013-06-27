@@ -1,6 +1,6 @@
 # Twitter RSS Feeds - Google Apps Script
 
-Google Apps Script to use Twitter API v1.1 to create RSS feeds of  user's timeline, search results, user's favorites, or Twitter Lists. This script is based on the one by Amit Agarwal posted on [labnol.org](http://www.labnol.org/internet/google-plus-rss-feeds/25557/).
+Google Apps Script to use Twitter API v1.1 to create RSS feeds of  user's timeline, search results, user's favorites, or Twitter Lists. This script is based on the one by Amit Agarwal posted on [labnol.org](http://www.labnol.org/internet/twitter-rss-feeds/27931/).
 
 Twitter API 1.0 has been deprecated, and as such RSS feeds are no longer available. With API v1.1, all requests to the Twitter API must now be authenticated with OAuth. Using Google Apps Scripts, anyone can easily setup a script to do the oAuth and output an RSS feed without having to host the code themselves.
 
