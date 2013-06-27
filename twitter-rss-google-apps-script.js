@@ -56,28 +56,34 @@ function doGet(e) {
 
     var feed;
     var permalink;
+    var description;
 
     switch (a) {
         case "timeline":
             feed = "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=" + q;
             permalink = "https://twitter.com/" + q;
+            description = "Twitter updates from " + q + ".";
             break;
         case "search":
             feed = "https://api.twitter.com/1.1/search/tweets.json?q=" + encodeString (q);
             permalink = "https://twitter.com/search?q=" + encodeString (q);
+            description = "Twitter updates from search for: " + q + ".";
             break;
         case "favorites":
             feed = "https://api.twitter.com/1.1/favorites/list.json?screen_name=" + q;
             permalink = "https://twitter.com/" + q + "/favorites/";
+            description = "Twitter favorites from " + q + ".";
             break;
         case "list":
             var i = q.split("/");
             feed = "https://api.twitter.com/1.1/lists/statuses.json?slug=" + i[1] + "&owner_screen_name=" + i[0];
             permalink = "https://twitter.com/" + q;
+            description = "Twitter updates from " + q + ".";
             break;
         default:
             feed = "https://api.twitter.com/1.1/statuses/user_timeline.json";
             permalink = "https://twitter.com";
+            description = "Twitter timeline.";
             break;
     }
 
@@ -88,7 +94,7 @@ function doGet(e) {
     var rss   = cache.get(id);
 
     if (!rss) {
-        rss = jsonToRss(feed, permalink, a, q);
+        rss = jsonToRss(feed, permalink, description, a, q);
 
         cache.put(id, rss, 900);
     }
@@ -98,7 +104,7 @@ function doGet(e) {
 }
 
 
-function jsonToRss(feed, permalink, type, key) {
+function jsonToRss(feed, permalink, description, type, key) {
     oAuth();
 
     var options =
@@ -125,17 +131,21 @@ function jsonToRss(feed, permalink, type, key) {
 
                 if (len) {
                     rss = '<?xml version="1.0"?><rss version="2.0">';
-                    rss += ' <channel><title>Twitter ' + type + ': ' + key + '</title>';
-                    rss += ' <link>' + permalink + '</link>';
-                    rss += ' <pubDate>' + new Date() + '</pubDate>';
+                    rss += '<channel><title>Twitter ' + type + ': ' + key + '</title>';
+                    rss += '<link>' + permalink + '</link>';
+                    rss += '<description>' + description + '</description>';
 
-                    for (var i=0; i<len; i++) {
+                    for (var i = 0; i < len; i++) {
                         var sender = tweets[i].user.screen_name;
                         var tweet = htmlentities(tweets[i].text);
+                        var date = new Date(tweets[i].created_at);
+
+                        if (i === 0) {
+                            rss += '<pubDate>' + date.toUTCString() + '</pubDate>';
+                        }
 
                         rss += "<item><title>" + sender + ": " + tweet + "</title>";
-                        rss += "<author>" + tweets[i].user.name + " (@" + sender + ")</author>";
-                        rss += "<pubDate>" + tweets[i].created_at + "</pubDate>";
+                        rss += "<pubDate>" + date.toUTCString() + "</pubDate>";
                         rss += "<guid isPermaLink='false'>" + tweets[i].id_str + "</guid>";
                         rss += "<link>https://twitter.com/" + sender + "/statuses/" + tweets[i].id_str + "</link>";
                         rss += "<description>" + tweet + "</description>";
