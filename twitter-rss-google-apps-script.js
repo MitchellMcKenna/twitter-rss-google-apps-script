@@ -11,8 +11,8 @@
 
 function start() {
     // Get your Twitter keys from dev.twitter.com/apps
-    var CONSUMER_KEY = "YOUR_TWITTER_CONSUMER_KEY";
-    var CONSUMER_SECRET = "YOUR_TWITTER_CONSUMER_SECRET";
+    var CONSUMER_KEY = "YOUR_TWITTER_CONSUMER_KEY",
+        CONSUMER_SECRET = "YOUR_TWITTER_CONSUMER_SECRET";
 
     initialize(CONSUMER_KEY, CONSUMER_SECRET);
 }
@@ -26,9 +26,7 @@ function initialize(key, secret) {
     if (url) {
         connectTwitter();
 
-        var msg = "";
-
-        msg += "Sample RSS Feeds for Twitter\n";
+        var msg = "Sample RSS Feeds for Twitter\n";
         msg += "============================";
 
         msg += "\n\nTwitter Timeline of user @labnol";
@@ -51,12 +49,12 @@ function initialize(key, secret) {
 }
 
 function doGet(e) {
-    var a = e.parameter.action;
-    var q = e.parameter.q;
+    var a = e.parameter.action,
+        q = e.parameter.q;
 
-    var feed;
-    var permalink;
-    var description;
+    var feed,
+        permalink,
+        description;
 
     switch (a) {
         case "timeline":
@@ -87,11 +85,9 @@ function doGet(e) {
             break;
     }
 
-    var id = Utilities.base64Encode(feed);
-
-    var cache = CacheService.getPublicCache();
-
-    var rss   = cache.get(id);
+    var id = Utilities.base64Encode(feed),
+        cache = CacheService.getPublicCache(),
+        rss   = cache.get(id);
 
     if (!rss) {
         rss = jsonToRss(feed, permalink, description, a, q);
@@ -125,9 +121,8 @@ function jsonToRss(feed, permalink, description, type, key) {
             }
 
             if (tweets) {
-                var len = tweets.length;
-
-                var rss = "";
+                var len = tweets.length,
+                    rss = "";
 
                 if (len) {
                     rss = '<?xml version="1.0"?><rss version="2.0">';
@@ -166,14 +161,12 @@ function jsonToRss(feed, permalink, description, type, key) {
 function connectTwitter() {
     oAuth();
 
-    var search = "https://api.twitter.com/1.1/application/rate_limit_status.json";
-
-    var options =
-    {
-        "method": "get",
-        "oAuthServiceName":"twitter",
-        "oAuthUseToken":"always"
-    };
+    var search = "https://api.twitter.com/1.1/application/rate_limit_status.json",
+        options = {
+            "method": "get",
+            "oAuthServiceName":"twitter",
+            "oAuthUseToken":"always"
+        };
 
     try {
         var result = UrlFetchApp.fetch(search, options);
