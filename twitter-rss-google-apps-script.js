@@ -136,22 +136,62 @@ function jsonToRss(feed, permalink, description, type, key) {
                     rss += '<description>' + description + '</description>';
 
                     for (var i = 0; i < len; i++) {
-                        var sender = tweets[i].user.screen_name;
-                        var tweet = htmlentities(tweets[i].text);
-                        var date = new Date(tweets[i].created_at);
+                      
+                        if (typeof tweets[i].retweeted_status != 'undefined') {
+                          var tweet = tweets[i].retweeted_status;
+                        } else {
+                          var tweet = tweets[i];
+                        }
+                        var sender = tweet.user.screen_name;
+                        var sender_name = tweet.user.name;
+                        var senderpic = tweet.user.profile_image_url_https;
+                        var original_tweet = htmlentities(tweet.text);
+                        var display_tweet = tweet.text;
+                        var retweets = tweet.retweet_count;
+                        var favs = tweet.favorite_count;
+                        var date = new Date(tweet.created_at);
+                                           
+                         //Parse Tweet for Display
+                      if (typeof tweet.entities.hashtags != 'undefined') {
+                        for (var j = 0; j < tweet.entities.hashtags.length; j++) {
+                          display_tweet = display_tweet.replace("#"+tweet.entities.hashtags[j].text, "<a href='https://twitter.com/search?q=%23"+tweet.entities.hashtags[j].text+"&src=hash'>#" + tweet.entities.hashtags[j].text + "</a>");
+                        }
+                      }
+                      if (typeof tweet.entities.media != 'undefined') {
+                        for (j = 0; j < tweet.entities.media.length; j++) {
+                          display_tweet = display_tweet.replace(tweet.entities.media[j].url, "<a href='"+tweet.entities.media[j].expanded_url+"' title='"+tweet.entities.media[j].display_url+"'><img src='"+tweet.entities.media[j].media_url_https+"'></a>");
+                        }
+                      }
+                      if (typeof tweet.entities.urls != 'undefined') {
+                        for (j = 0; j < tweet.entities.urls.length; j++) {
+                          display_tweet = display_tweet.replace(tweet.entities.urls[j].url, "<a href='"+tweet.entities.urls[j].url+"' title='"+tweet.entities.urls[j].expanded_url+"'>"+tweet.entities.urls[j].display_url+"</a>");
+                        }
+                      }
+                      if (typeof tweet.entities.user_mentions != 'undefined') {
+                        for (j = 0; j < tweet.entities.user_mentions.length; j++) {
+                          display_tweet = display_tweet.replace("@"+tweet.entities.user_mentions[j].screen_name, "<a href='https://www.twitter.com/"+tweet.entities.user_mentions[j].screen_name+"' title=="+tweet.entities.user_mentions[j].name+"=>@"+tweet.entities.user_mentions[j].screen_name+"</a>");
+                        }
+                      }
+                      
 
                         if (i === 0) {
                             rss += '<pubDate>' + date.toUTCString() + '</pubDate>';
                         }
 
-                        rss += "<item><title>" + sender + ": " + tweet + "</title>";
+                        rss += "<item><title>" + sender + ": " + original_tweet + "</title>";
                         rss += "<pubDate>" + date.toUTCString() + "</pubDate>";
                         rss += "<guid isPermaLink='false'>" + tweets[i].id_str + "</guid>";
                         rss += "<link>https://twitter.com/" + sender + "/statuses/" + tweets[i].id_str + "</link>";
-                        rss += "<description>" + tweet + "</description>";
+                        rss += "<description><![CDATA[<table>";
+                        if (typeof tweets[i].retweeted_status != 'undefined') {
+                          rss += "<tr><td colspan='2'><a href='https://twitter.com/" + tweets[i].user.screen_name + "'>" + tweets[i].user.name + " (@" + tweets[i].user.screen_name + ") Retweeted</a></td></tr>";
+                        }
+                        rss += "<tr><td><a href='https://twitter.com/" + sender + "'><img src='"+senderpic+"'></a></td>"+
+                               "<td><strong>"+sender_name+"</strong> <a href='https://twitter.com/" + sender + "'>@"+sender+"</a> <br>";
+                        rss += display_tweet + "<br>";
+                        rss += retweets+" Retweets | "+favs+" Favorites</td></tr></table>]]></description>";
                         rss += "</item>";
                     }
-
                     rss += "</channel></rss>";
 
                     return rss;
