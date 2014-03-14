@@ -150,6 +150,7 @@ function jsonToRss(feed, permalink, description, type, key) {
                         var retweets = tweet.retweet_count;
                         var favs = tweet.favorite_count;
                         var date = new Date(tweet.created_at);
+                        var enclosures = "";
                                            
                          //Parse Tweet for Display
                       if (typeof tweet.entities.hashtags != 'undefined') {
@@ -160,6 +161,11 @@ function jsonToRss(feed, permalink, description, type, key) {
                       if (typeof tweet.entities.media != 'undefined') {
                         for (j = 0; j < tweet.entities.media.length; j++) {
                           display_tweet = display_tweet.replace(tweet.entities.media[j].url, "<a href='"+tweet.entities.media[j].expanded_url+"' title='"+tweet.entities.media[j].display_url+"'><img src='"+tweet.entities.media[j].media_url_https+"'></a>");
+                          var tmp = UrlFetchApp.fetch(tweet.entities.media[j].media_url_https);
+                          tmp = tmp.getHeaders();
+                          if (typeof tmp["Content-Length"] != 'undefined' && typeof tmp["Content-Type"] != 'undefined') {
+                            enclosures += "<enclosure url='"+tweet.entities.media[j].media_url_https+"' length='"+tmp["Content-Length"]+"' type='"+tmp["Content-Type"]+"'/>\n";
+                          }
                         }
                       }
                       if (typeof tweet.entities.urls != 'undefined') {
@@ -190,6 +196,8 @@ function jsonToRss(feed, permalink, description, type, key) {
                                "<td><strong>"+sender_name+"</strong> <a href='https://twitter.com/" + sender + "'>@"+sender+"</a> <br>\n";
                         rss += display_tweet + "<br>\n";
                         rss += retweets+" Retweets | "+favs+" Favorites</td></tr></table>]]></description>\n";
+                        rss += enclosures;
+                        rss += "<comments>https://twitter.com/" + sender + "/statuses/" + tweets[i].id_str + "#descendants</comments>\n";
                         rss += "</item>\n";
                     }
 
