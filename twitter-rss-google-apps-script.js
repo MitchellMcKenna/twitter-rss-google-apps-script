@@ -130,10 +130,11 @@ function jsonToRss(feed, permalink, description, type, key) {
                 var rss = "";
 
                 if (len) {
-                    rss = '<?xml version="1.0"?><rss version="2.0">\n';
+                    rss = '<?xml version="1.0"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n';
                     rss += '<channel><title>Twitter ' + type + ': ' + key + '</title>\n';
                     rss += '<link>' + permalink + '</link>\n';
                     rss += '<description>' + description + '</description>\n';
+                    rss += '<atom:link href="'+ScriptApp.getService().getUrl()+'" rel="self" type="application/rss+xml" />';
 
                     for (var i = 0; i < len; i++) {
                       
@@ -164,7 +165,7 @@ function jsonToRss(feed, permalink, description, type, key) {
                           var tmp = UrlFetchApp.fetch(tweet.entities.media[j].media_url_https);
                           tmp = tmp.getHeaders();
                           if (typeof tmp["Content-Length"] != 'undefined' && typeof tmp["Content-Type"] != 'undefined') {
-                            enclosures += "<enclosure url='"+tweet.entities.media[j].media_url_https+"' length='"+tmp["Content-Length"]+"' type='"+tmp["Content-Type"]+"'/>\n";
+                            enclosures += "<enclosure url='"+tweet.entities.media[j].media_url+"' length='"+tmp["Content-Length"]+"' type='"+tmp["Content-Type"]+"' />\n";
                           }
                         }
                       }
@@ -175,11 +176,10 @@ function jsonToRss(feed, permalink, description, type, key) {
                       }
                       if (typeof tweet.entities.user_mentions != 'undefined') {
                         for (j = 0; j < tweet.entities.user_mentions.length; j++) {
-                          display_tweet = display_tweet.replace("@"+tweet.entities.user_mentions[j].screen_name, "<a href='https://www.twitter.com/"+tweet.entities.user_mentions[j].screen_name+"' title=="+tweet.entities.user_mentions[j].name+"=>@"+tweet.entities.user_mentions[j].screen_name+"</a>");
+                          display_tweet = display_tweet.replace("@"+tweet.entities.user_mentions[j].screen_name, "<a href='https://www.twitter.com/"+tweet.entities.user_mentions[j].screen_name+"' title='"+tweet.entities.user_mentions[j].name+"'>@"+tweet.entities.user_mentions[j].screen_name+"</a>");
                         }
                       }
                       
-
                         if (i === 0) {
                             rss += '<pubDate>' + date.toUTCString() + '</pubDate>\n';
                         }
@@ -195,7 +195,8 @@ function jsonToRss(feed, permalink, description, type, key) {
                         rss += "<tr><td><a href='https://twitter.com/" + sender + "'><img src='"+senderpic+"'></a></td>\n"+
                                "<td><strong>"+sender_name+"</strong> <a href='https://twitter.com/" + sender + "'>@"+sender+"</a> <br>\n";
                         rss += display_tweet + "<br>\n";
-                        rss += retweets+" Retweets | "+favs+" Favorites</td></tr></table>]]></description>\n";
+                        rss += retweets+" Retweets | "+favs+" Favorites</td></tr></table>\n";
+                        rss += "]]></description>\n";
                         rss += enclosures;
                         rss += "<comments>https://twitter.com/" + sender + "/statuses/" + tweets[i].id_str + "#descendants</comments>\n";
                         rss += "</item>\n";
