@@ -18,5 +18,5 @@ Twitter API 1.0 has been deprecated, and as such RSS feeds are no longer availab
 * Go to *Publish* -> *Deploy as Web App* and choose *Anyone, even anonymous* under Who has Access. Click the Deploy button.
 
 ### 3. Deploy the Twitter RSS Feed generator
-* Go to *Run* -> *Start* and an email will be sent to your google account's email address with a link to twitter to grant the app the necessary permissions.
+* Go to *Run* -> *Start* and an email will be sent to your google account's email address with a link to twitter to grant the app the necessary permissions. If you don't get the email, you can get the link from View -> Logs.
 * After clicking that, do *Run* -> *Start* again and you’ll get an email with links to some sample RSS feeds.
