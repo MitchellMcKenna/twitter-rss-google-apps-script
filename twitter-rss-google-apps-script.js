@@ -5,38 +5,47 @@
  * user's timeline, search results, user's favorites, or Twitter
  * Lists.
  *
- * @author Amit Agarwal <amit@labnol.org>
  * @author Mitchell McKenna <mitchellmckenna@gmail.com>
+ * @author Amit Agarwal <amit@labnol.org>
  */
 
+// Get your Twitter keys from https://apps.twitter.com
+var TWITTER_CONSUMER_KEY = "YOUR_TWITTER_CONSUMER_KEY",
+    TWITTER_CONSUMER_SECRET = "YOUR_TWITTER_CONSUMER_SECRET";
+
+// Get your google script project key from File -> Project properties
+var SCRIPT_PROJECT_KEY = "YOUR_SCRIPT_PROJECT_KEY";
+
+// Setting cache time to less than 15 minutes may result in hitting Twitter API Rate Limits
+var CACHE_TIME = 900; // 15 minutes
+
+// Change this to false if you can't fix the script and are tired of getting emails
+var EMAIL_ERROR_REPORTING = true,
+    EMAIL_ERROR_REPORTING_CACHE_TIME = 14400; // 4 hours
+
 function start() {
-    // Get your Twitter keys from dev.twitter.com/apps
-    var CONSUMER_KEY = "YOUR_TWITTER_CONSUMER_KEY",
-        CONSUMER_SECRET = "YOUR_TWITTER_CONSUMER_SECRET";
-
-    initialize(CONSUMER_KEY, CONSUMER_SECRET);
-}
-
-function initialize(key, secret) {
-    ScriptProperties.setProperty("TWITTER_CONSUMER_KEY", key);
-    ScriptProperties.setProperty("TWITTER_CONSUMER_SECRET", secret);
-
     var url = ScriptApp.getService().getUrl();
 
     if (url) {
-        connectTwitter();
+        try {
+            checkTwitterRateLimit();
+        } catch (e) {
+            return errorHandler(e);
+        }
 
-        var msg = "Sample RSS Feeds for Twitter\n";
+        var msg = "";
+
+        msg += "Sample RSS Feeds for Twitter\n";
         msg += "============================";
 
-        msg += "\n\nTwitter Timeline of user @labnol";
-        msg += "\n" + url + "?action=timeline&q=labnol";
+        msg += "\n\nTwitter Timeline of user @mitchellmckenna";
+        msg += "\n" + url + "?action=timeline&q=mitchellmckenna";
 
-        msg += "\n\nTwitter Favorites of user @labnol";
-        msg += "\n" + url + "?action=favorites&q=labnol";
+        msg += "\n\nTwitter Favorites of user @mitchellmckenna";
+        msg += "\n" + url + "?action=favorites&q=mitchellmckenna";
 
-        msg += "\n\nTwitter List labnol/friends-in-india";
-        msg += "\n" + url + "?action=list&q=labnol/friends-in-india";
+        msg += "\n\nTwitter List mitchellmckenna/developers-designers";
+        msg += "\n" + url + "?action=list&q=mitchellmckenna/developers-designers";
 
         msg += "\n\nTwitter Search for New York";
         msg += "\n" + url + "?action=search&q=new+york";
@@ -49,34 +58,34 @@ function initialize(key, secret) {
 }
 
 function doGet(e) {
-    var a = e.parameter.action,
-        q = e.parameter.q;
+    var action = e.parameter.action,
+        query = e.parameter.q;
 
     var feed,
         permalink,
         description;
 
-    switch (a) {
+    switch (action) {
         case "timeline":
-            feed = "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=" + q;
-            permalink = "https://twitter.com/" + q;
-            description = "Twitter updates from " + q + ".";
+            feed = "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=" + query;
+            permalink = "https://twitter.com/" + query;
+            description = "Twitter updates from " + query + ".";
             break;
         case "search":
-            feed = "https://api.twitter.com/1.1/search/tweets.json?q=" + encodeString (q);
-            permalink = "https://twitter.com/search?q=" + encodeString (q);
-            description = "Twitter updates from search for: " + q + ".";
+            feed = "https://api.twitter.com/1.1/search/tweets.json?q=" + encodeString (query);
+            permalink = "https://twitter.com/search?q=" + encodeString (query);
+            description = "Twitter updates from search for: " + query + ".";
             break;
         case "favorites":
-            feed = "https://api.twitter.com/1.1/favorites/list.json?screen_name=" + q;
-            permalink = "https://twitter.com/" + q + "/favorites/";
-            description = "Twitter favorites from " + q + ".";
+            feed = "https://api.twitter.com/1.1/favorites/list.json?screen_name=" + query;
+            permalink = "https://twitter.com/" + query + "/favorites/";
+            description = "Twitter favorites from " + query + ".";
             break;
         case "list":
-            var i = q.split("/");
-            feed = "https://api.twitter.com/1.1/lists/statuses.json?slug=" + i[1] + "&owner_screen_name=" + i[0];
-            permalink = "https://twitter.com/" + q;
-            description = "Twitter updates from " + q + ".";
+            var segments = query.split("/");
+            feed = "https://api.twitter.com/1.1/lists/statuses.json?slug=" + segments[1] + "&owner_screen_name=" + segments[0];
+            permalink = "https://twitter.com/" + query;
+            description = "Twitter updates from " + query + ".";
             break;
         default:
             feed = "https://api.twitter.com/1.1/statuses/user_timeline.json";
@@ -85,14 +94,18 @@ function doGet(e) {
             break;
     }
 
-    var id = Utilities.base64Encode(feed),
-        cache = CacheService.getPublicCache(),
-        rss   = cache.get(id);
+    var cache = CacheService.getPublicCache(),
+        cacheId = Utilities.base64Encode(feed),
+        rss = cache.get(cacheId);
 
     if (!rss) {
-        rss = jsonToRss(feed, permalink, description, a, q);
+        try {
+            rss = jsonToRss(feed, permalink, description, action, query);
+        } catch (e) {
+            return errorHandler(e);
+        }
 
-        cache.put(id, rss, 900);
+        cache.put(cacheId, rss, CACHE_TIME);
     }
 
     return ContentService.createTextOutput(rss)
@@ -100,79 +113,104 @@ function doGet(e) {
 }
 
 
-function jsonToRss(feed, permalink, description, type, key) {
-    oAuth();
+function jsonToRss(feed, permalink, description, action, query) {
+    var service = oAuth(),
+        response = service.fetch(feed),
+        tweets = JSON.parse(response.getContentText());
 
-    var options =
-    {
-        "method": "get",
-        "oAuthServiceName":"twitter",
-        "oAuthUseToken":"always"
-    };
+    if (action == "search") {
+        tweets = tweets.statuses;
+    }
 
-    try {
-        var result = UrlFetchApp.fetch(feed, options);
+    if (tweets) {
+        var rss = '<?xml version="1.0"?><rss version="2.0">';
+        rss += '<channel><title>Twitter ' + action + ': ' + query + '</title>';
+        rss += '<link>' + permalink + '</link>';
+        rss += '<description>' + description + '</description>';
 
-        if (result.getResponseCode() === 200) {
-            var tweets = Utilities.jsonParse(result.getContentText());
 
-            if (type == "search") {
-                tweets = tweets.statuses;
+        for (var i = 0; i < tweets.length; i++) {
+            var sender = tweets[i].user.screen_name,
+                tweet = htmlentities(tweets[i].text),
+                date = new Date(tweets[i].created_at);
+
+            if (i === 0) {
+                rss += '<pubDate>' + date.toUTCString() + '</pubDate>';
             }
 
-            if (tweets) {
-                var len = tweets.length,
-                    rss = "";
-
-                if (len) {
-                    rss = '<?xml version="1.0"?><rss version="2.0">';
-                    rss += '<channel><title>Twitter ' + type + ': ' + key + '</title>';
-                    rss += '<link>' + permalink + '</link>';
-                    rss += '<description>' + description + '</description>';
-
-                    for (var i = 0; i < len; i++) {
-                        var sender = tweets[i].user.screen_name;
-                        var tweet = htmlentities(tweets[i].text);
-                        var date = new Date(tweets[i].created_at);
-
-                        if (i === 0) {
-                            rss += '<pubDate>' + date.toUTCString() + '</pubDate>';
-                        }
-
-                        rss += "<item><title>" + sender + ": " + tweet + "</title>";
-                        rss += "<pubDate>" + date.toUTCString() + "</pubDate>";
-                        rss += "<guid isPermaLink='false'>" + tweets[i].id_str + "</guid>";
-                        rss += "<link>https://twitter.com/" + sender + "/statuses/" + tweets[i].id_str + "</link>";
-                        rss += "<description>" + tweet + "</description>";
-                        rss += "</item>";
-                    }
-
-                    rss += "</channel></rss>";
-
-                    return rss;
-                }
-            }
+            rss += "<item><title>" + sender + ": " + tweet + "</title>";
+            rss += "<pubDate>" + date.toUTCString() + "</pubDate>";
+            rss += "<guid isPermaLink='false'>" + tweets[i].id_str + "</guid>";
+            rss += "<link>https://twitter.com/" + sender + "/statuses/" + tweets[i].id_str + "</link>";
+            rss += "<description>" + tweet + "</description>";
+            rss += "</item>";
         }
-    } catch (e) {
-        Logger.log(e.toString());
+
+
+        rss += "</channel></rss>";
+
+        return rss;
     }
 }
 
-function connectTwitter() {
-    oAuth();
+function checkTwitterRateLimit() {
+    var service = oAuth(),
+        search = "https://api.twitter.com/1.1/application/rate_limit_status.json";
 
-    var search = "https://api.twitter.com/1.1/application/rate_limit_status.json",
-        options = {
-            "method": "get",
-            "oAuthServiceName":"twitter",
-            "oAuthUseToken":"always"
-        };
+    return service.fetch(search);
+}
 
-    try {
-        var result = UrlFetchApp.fetch(search, options);
-    } catch (e) {
-        Logger.log(e.toString());
+function oAuth() {
+    var service = getTwitterService();
+
+    // Uncomment this is to debug Twitter OAuth failing.
+    //service.reset();
+
+    if (service.hasAccess()) {
+        return service;
+    } else {
+        throw new Error('Twitter Auth Required. Please visit the following URL and re-run the script: ' + service.authorize());
     }
+}
+
+
+function getTwitterService() {
+    var service = OAuth1.createService('twitter');
+    service.setAccessTokenUrl('https://api.twitter.com/oauth/access_token')
+    service.setRequestTokenUrl('https://api.twitter.com/oauth/request_token')
+    service.setAuthorizationUrl('https://api.twitter.com/oauth/authorize')
+    service.setConsumerKey(TWITTER_CONSUMER_KEY);
+    service.setConsumerSecret(TWITTER_CONSUMER_SECRET);
+    service.setProjectKey(SCRIPT_PROJECT_KEY);
+    service.setCallbackFunction('authCallback');
+    service.setPropertyStore(PropertiesService.getScriptProperties());
+    return service;
+}
+
+function authCallback(request) {
+    var service = getTwitterService(),
+        isAuthorized = service.handleCallback(request);
+
+    if (isAuthorized) {
+        return HtmlService.createHtmlOutput('Success! Your feeds should now be working. You can close this page.');
+    } else {
+        return HtmlService.createHtmlOutput('Denied. You can close this page');
+    }
+}
+
+function errorHandler(e) {
+    Logger.log(e.toString());
+
+    var cache = CacheService.getPublicCache(),
+        message = e.message || e.toString(),
+        errorCacheId = Utilities.base64Encode(message.substr(0, 64));
+
+    if (EMAIL_ERROR_REPORTING && !cache.get(errorCacheId)) {
+        MailApp.sendEmail(Session.getActiveUser().getEmail(), "Twitter RSS Feeds Error", message);
+        cache.put(errorCacheId, true, EMAIL_ERROR_REPORTING_CACHE_TIME);
+    }
+
+    return HtmlService.createHtmlOutput(e.message);
 }
 
 function encodeString(q) {
@@ -192,13 +230,4 @@ function htmlentities(str) {
     str = str.replace(/"/g, "&quot;");
     str = str.replace(/'/g, "&#039;");
     return str;
-}
-
-function oAuth() {
-    var oauthConfig = UrlFetchApp.addOAuthService("twitter");
-    oauthConfig.setAccessTokenUrl("https://api.twitter.com/oauth/access_token");
-    oauthConfig.setRequestTokenUrl("https://api.twitter.com/oauth/request_token");
-    oauthConfig.setAuthorizationUrl("https://api.twitter.com/oauth/authorize");
-    oauthConfig.setConsumerKey(ScriptProperties.getProperty("TWITTER_CONSUMER_KEY"));
-    oauthConfig.setConsumerSecret(ScriptProperties.getProperty("TWITTER_CONSUMER_SECRET"));
 }
