@@ -59,7 +59,10 @@ function start() {
 
 function doGet(e) {
     var action = e.parameter.action,
-        query = e.parameter.q;
+        query = e.parameter.q,
+        geocode = (typeof e.parameter.geocode === "string") ? e.parameter.geocode : "",
+        lang = (typeof e.parameter.lang === "string") ? e.parameter.lang : "",
+        result_type = (typeof e.parameter.result_type === "string") ? e.parameter.result_type : "";
 
     var feed,
         permalink,
@@ -72,7 +75,7 @@ function doGet(e) {
             description = "Twitter updates from " + query + ".";
             break;
         case "search":
-            feed = "https://api.twitter.com/1.1/search/tweets.json?q=" + encodeString (query);
+            feed = "https://api.twitter.com/1.1/search/tweets.json?q=" + encodeString (query) + "&geocode=" + encodeString(geocode) + "&lang=" + encodeString(lang) + "&result_type=" + encodeString(result_type);
             permalink = "https://twitter.com/search?q=" + encodeString (query);
             description = "Twitter updates from search for: " + query + ".";
             break;
